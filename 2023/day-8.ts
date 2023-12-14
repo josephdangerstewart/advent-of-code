@@ -7,7 +7,7 @@ interface Node {
 
 async function main(): Promise<void> {
 	const fileContents = (
-		await fs.readFile('./day-8.txt', { encoding: 'utf-8' })
+		await fs.readFile('./2023/day-8.txt', { encoding: 'utf-8' })
 	).split('\n');
 
 	const directions = fileContents[0].split('');
