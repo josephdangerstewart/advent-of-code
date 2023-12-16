@@ -5,6 +5,8 @@ type PuzzleInput = CellKind[][];
 type CellCoordinates = [number, number];
 type GalaxyPairing = [CellCoordinates, CellCoordinates];
 
+const expansionRate = 1000000;
+
 async function main() {
 	const rawInput = await fs.readFile('./2023/day-11.txt', {
 		encoding: 'utf-8',
@@ -13,10 +15,11 @@ async function main() {
 		.split(/\r?\n/)
 		.map((row) => row.split('').map(validateCellKind));
 
-	expandSpace(puzzleInput);
+	const emptyRows = getEmptyRowIndexes(puzzleInput);
+	const emptyColumns = getEmptyColumnIndexes(puzzleInput);
 
 	const result = getPairings(puzzleInput)
-		.map(getDistanceOfPair)
+		.map((pair) => getDistanceOfPair(pair, emptyRows, emptyColumns))
 		.reduce((run, cur) => run + cur);
 
 	console.log('result', result);
@@ -24,9 +27,29 @@ async function main() {
 
 main();
 
-function getDistanceOfPair(pairing: GalaxyPairing): number {
+function getDistanceOfPair(
+	pairing: GalaxyPairing,
+	emptyRowIndexes: number[],
+	emptyColumnIndexes: number[]
+): number {
 	const [[leftRow, leftCol], [rightRow, rightCol]] = pairing;
-	return Math.abs(rightRow - leftRow) + Math.abs(leftCol - rightCol);
+
+	const [minRow, maxRow] = [leftRow, rightRow].sort((a, b) => a - b);
+	const [minCol, maxCol] = [leftCol, rightCol].sort((a, b) => a - b);
+
+	const expandedRowsTraversed = emptyRowIndexes.filter(
+		(index) => index > minRow && index < maxRow
+	).length;
+	const expandedColumnsTraversed = emptyColumnIndexes.filter(
+		(index) => index > minCol && index < maxCol
+	).length;
+
+	return (
+		maxRow - minRow +
+		maxCol - minCol +
+		expandedColumnsTraversed * (expansionRate - 1) +
+		expandedRowsTraversed * (expansionRate - 1)
+	);
 }
 
 function getPairings(input: PuzzleInput): GalaxyPairing[] {
@@ -48,25 +71,24 @@ function getPairings(input: PuzzleInput): GalaxyPairing[] {
 	return pairings;
 }
 
-function expandSpace(input: PuzzleInput) {
-	let rowCount = input.length;
-	let columnCount = input[0].length;
-
-	for (let row = 0; row < rowCount; row++) {
-		if (isRowEmpty(input, row)) {
-			addEmptyRow(input, row);
-			rowCount++;
-			row++;
+function getEmptyRowIndexes(input: PuzzleInput): number[] {
+	const result: number[] = [];
+	for (let rowIndex = 0; rowIndex < input.length; rowIndex++) {
+		if (isRowEmpty(input, rowIndex)) {
+			result.push(rowIndex);
 		}
 	}
+	return result;
+}
 
-	for (let column = 0; column < columnCount; column++) {
-		if (isColumnEmpty(input, column)) {
-			addEmptyColumn(input, column);
-			columnCount++;
-			column++;
+function getEmptyColumnIndexes(input: PuzzleInput): number[] {
+	const result: number[] = [];
+	for (let columnIndex = 0; columnIndex < input[0].length; columnIndex++) {
+		if (isColumnEmpty(input, columnIndex)) {
+			result.push(columnIndex);
 		}
 	}
+	return result;
 }
 
 function isColumnEmpty(input: PuzzleInput, columnIndex: number) {
@@ -85,18 +107,6 @@ function isRowEmpty(input: PuzzleInput, rowIndex: number) {
 		}
 	}
 	return true;
-}
-
-function addEmptyRow(input: PuzzleInput, rowIndex: number) {
-	const rowLength = input[0].length;
-	const newRow: CellKind[] = Array.from(Array(rowLength)).map(() => '.');
-	input.splice(rowIndex, 0, newRow);
-}
-
-function addEmptyColumn(input: PuzzleInput, columnIndex: number) {
-	for (let i = 0; i < input.length; i++) {
-		input[i].splice(columnIndex, 0, '.');
-	}
 }
 
 function validateCellKind(input: string): CellKind {
